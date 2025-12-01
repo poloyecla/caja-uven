@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Caja Uven - Visor 3D</title>
+    <script type="module" src="https://unpkg.com/@google/model-viewer@^2.0.0/dist/model-viewer.min.js"></script>
+    <style>
+        /* Reset completo */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        /* Contenedor principal */
+        .container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        /* Visor 3D */
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            --progress-bar-color: #4CAF50;
+            --progress-bar-height: 3px;
+        }
+        
+        /* Mensajes */
+        .loading, .error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            max-width: 80%;
+        }
+        
+        .error {
+            background: rgba(255, 0, 0, 0.7);
+            display: none;
+        }
+        
+        /* Instrucciones */
+        .instructions {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+        
+        /* Botón AR */
+        .ar-button {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 16px;
+            cursor: pointer;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Spinner de carga */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #4CAF50;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Ocultar controles nativos en móvil */
+        .hide-ui {
+            --poster-color: transparent;
+            --progress-bar-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Visor 3D -->
+        <model-viewer
+            id="visor3d"
+            src="CAJA.glb"
+            alt="Caja Uven - Modelo 3D"
+            camera-controls
+            auto-rotate
+            ar
+            ar-scale="fixed"
+            touch-action="pan-y"
+            environment-image="neutral"
+            exposure="1"
+            shadow-intensity="1"
+            camera-orbit="0deg 75deg 105%"
+            field-of-view="60deg"
+            min-camera-orbit="auto auto 80%"
+            max-camera-orbit="auto auto 400%"
+            interaction-prompt="none"
+            class="hide-ui">
+            
+            <!-- Mensaje de carga -->
+            <div class="loading" slot="progress-bar">
+                <div class="spinner"></div>
+                <p>Cargando modelo 3D...</p>
+            </div>
+            
+            <!-- Botón AR -->
+            <button class="ar-button" slot="ar-button">
+                👁️ Ver en Realidad Aumentada
+            </button>
+            
+        </model-viewer>
+        
+        <!-- Instrucciones -->
+        <div class="instructions">
+            📱 Usa un dedo para rotar • Dos dedos para zoom
+        </div>
+        
+        <!-- Mensaje de error (oculto inicialmente) -->
+        <div class="error" id="errorMessage">
+            ❌ Error cargando el modelo
+        </div>
+    </div>
+    
+    <script>
+        // Referencias a elementos
+        const modelViewer = document.getElementById('visor3d');
+        const arButton = document.querySelector('.ar-button');
+        const errorMessage = document.getElementById('errorMessage');
+        const loadingMessage = document.querySelector('.loading');
+        
+        // Evento cuando el modelo carga correctamente
+        modelViewer.addEventListener('load', () => {
+            console.log('✅ Modelo cargado exitosamente');
+            loadingMessage.style.display = 'none';
+            
+            // Mostrar botón AR si está disponible
+            if (modelViewer.canActivateAR) {
+                arButton.style.display = 'block';
+            }
+        });
+        
+        // Evento de error
+        modelViewer.addEventListener('error', (event) => {
+            console.error('❌ Error:', event.detail);
+            loadingMessage.style.display = 'none';
+            errorMessage.style.display = 'block';
+            errorMessage.innerHTML = `
+                ❌ Error cargando el modelo<br><br>
+                Posibles causas:<br>
+                1. El archivo "modelo.glb" no existe<br>
+                2. El modelo es muy pesado<br>
+                3. Formato incompatible
+            `;
+        });
+        
+        // Detectar si es móvil y ajustar
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isMobile) {
+            console.log('📱 Modo móvil activado');
+            // Optimizaciones para móvil
+            modelViewer.setAttribute('interaction-prompt-threshold', '1000');
+        }
+        
+        // Forzar redibujado en algunos dispositivos
+        window.addEventListener('resize', () => {
+            modelViewer.requestUpdate();
+        });
+        
+        // Iniciar rotación automática después de 3 segundos
+        setTimeout(() => {
+            if (modelViewer.loaded) {
+                modelViewer.autoRotate = true;
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
